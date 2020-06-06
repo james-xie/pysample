@@ -142,7 +142,15 @@ int SampleCounter_AddFrame(SampleCounter *counter, PyObject *frame) {
 }
 
 
-
+/**
+ * Generate the collected stacks information.
+ * The output stack information will be used as the input of the flame graph.
+ *
+ * See: https://github.com/brendangregg/FlameGraph
+ *
+ * @param counter
+ * @return
+ */
 PyObject *SampleCounter_FlameOutput(SampleCounter *counter) {
     int res;
     SamplePoint *point;
@@ -154,6 +162,10 @@ PyObject *SampleCounter_FlameOutput(SampleCounter *counter) {
     str_buffer = PyList_New(0);
     if (str_buffer == NULL) {
         goto error;
+    }
+
+    if (counter->points->used <= 0) {
+        return PyUnicode_FromString("");
     }
 
     HASH_MAP_ITERATOR_INIT(&iterator, counter->points);

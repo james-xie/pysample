@@ -14,7 +14,15 @@ class OutputRepository:
 
 
 class FileRepository(OutputRepository):
+    """
+    Store the sampling result to the given directory.
+    """
+
     def __init__(self, directory: str):
+        """
+        :param directory:
+            The directory for storing sampling results.
+        """
         directory = self._prepare_dir(directory)
         self._directory = directory
 

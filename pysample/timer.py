@@ -6,6 +6,13 @@ from pysample.context import SampleContext, SampleContextFactory, SampleContextM
 
 
 class SampleTimer:
+    """
+    Sample event triggered by "SampleTimer".
+
+    Only one SampleTimer is running at the same time. Usually use the "start_timer"
+    function to start a "SampleTimer" instead of calling "SamplerTimer().start()" directly.
+    """
+
     def start(self):
         raise NotImplementedError
 
@@ -31,7 +38,15 @@ class ThreadContextFactory(SampleContextFactory):
 
 
 class ThreadSampleTimer(SampleTimer):
+    """
+    Start a new thread, which is used to periodically trigger sampling event.
+    """
     def __init__(self, interval: int, context_manager: SampleContextManager[ThreadSampleContext]):
+        """
+        :param interval:
+            Sampling interval (in milliseconds)
+        :param context_manager:
+        """
         self._thread = None
         self._active = False
         self._interval = interval
@@ -71,6 +86,13 @@ _lock = threading.Lock()
 
 
 def start_timer(timer: SampleTimer):
+    """
+    Start the given timer and save the "timer" reference to the global variable "_timer".
+    If the timer has started, it will be return immediately
+
+    :param timer:
+    :return:
+    """
     global _timer
 
     if _timer:

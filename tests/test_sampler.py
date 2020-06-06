@@ -48,3 +48,18 @@ class TestSampler(unittest.TestCase):
             content = file.read()
             lines = content.splitlines()
             self.assertEqual(len(lines), 3)
+
+    def test_sample_with_output_threshold(self):
+        now = datetime.datetime.now()
+
+        @sample(10, 500, self._output_dir)
+        def foo():
+            import time
+            time.sleep(0.11)
+
+        foo()
+        today = now.strftime("%Y-%m-%d")
+        subdir = f"{self._output_dir}/{today}"
+        self.assertTrue(os.path.exists(subdir))
+        self.assertEqual(len(os.listdir(subdir)), 0)
+

@@ -45,13 +45,18 @@ class TestContext(unittest.TestCase):
 
     def test_collect_and_output(self):
         tb_array = []
-        ctx = SampleContext("test", 1)
+        ctx = SampleContext("test", 10)
         self._frame1(ctx, tb_array)
         self._frame2(ctx, tb_array)
 
         output = ctx.flame_output()
-        expect_output = f"{tb_array[0]}; 3\n{tb_array[1]}; 2\n"
+        expect_output = f"{tb_array[0]}; 30\n{tb_array[1]}; 20\n"
         self.assert_output_equal(expect_output, output)
+
+    def test_empty_output(self):
+        ctx = SampleContext("test", 10)
+        output = ctx.flame_output()
+        self.assertEqual(output, "")
 
 
 if __name__ == "__main__":
