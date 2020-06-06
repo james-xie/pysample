@@ -80,9 +80,9 @@ class Sampler:
 def sample(
     interval: int,
     output_threshold: int,
-    output_path: str,
-    auto_start_timer: bool = True,
+    output_path: str = None,
     output_repo: OutputRepository = None,
+    auto_start_timer: bool = True,
 ):
     """
     A decorator function which simplify the use of "sampler" class.

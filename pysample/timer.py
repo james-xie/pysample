@@ -112,6 +112,9 @@ def timer_started():
 
 
 def stop_timer():
+    global _timer
+
     assert _timer is not None
     _timer.stop()
+    _timer = None
 

@@ -50,16 +50,19 @@ CtxType = TypeVar("CtxType", bound=SampleContext)
 
 
 class SampleContextManager(Generic[CtxType]):
+
     def __init__(self, capacity: int = 1000):
         self._capacity = capacity
         self._active_context = deque()
+        self._lock = threading.Lock()
 
     def push(self, ctx: CtxType):
-        if len(self._active_context) >= self._capacity:
-            logger.warning(f'"SampleContext" exceeds the maximum capacity ({self._capacity}) limit')
-            return
+        with self._lock:
+            if len(self._active_context) >= self._capacity:
+                logger.warning(f'"SampleContext" exceeds the maximum capacity ({self._capacity}) limit')
+                return
 
-        self._active_context.append(ctx)
+            self._active_context.append(ctx)
 
     def pop(self, ctx: CtxType):
         try:
@@ -70,15 +73,15 @@ class SampleContextManager(Generic[CtxType]):
     def iterator(self) -> Iterator[CtxType]:
         return iter(self._active_context)
 
-    _lock = threading.Lock()
     _instance = None
+    _get_instance_lock = threading.Lock()
 
     @classmethod
     def get_default_instance(cls) -> "SampleContextManager":
         if cls._instance:
             return cls._instance
 
-        with cls._lock:
+        with cls._get_instance_lock:
             if cls._instance is None:
                 cls._instance = SampleContextManager()
         return cls._instance
