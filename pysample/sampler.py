@@ -2,7 +2,7 @@ import logging
 import functools
 from types import FunctionType
 
-from pysample.repository import OutputRepository, FileRepository
+from pysample.repository import OutputRepository, FileRepository, DirectoryRepository
 from pysample.context import SampleContext, SampleContextFactory, SampleContextManager
 from pysample.timer import (
     ThreadSampleTimer,
@@ -53,8 +53,8 @@ class Sampler:
         self._context_factory = context_factory
         self._output_repo = output_repo
 
-    def begin(self, fn_name: str) -> SampleContext:
-        ctx = self._context_factory.create(fn_name, self._interval)
+    def begin(self, name: str) -> SampleContext:
+        ctx = self._context_factory.create(name, self._interval)
         self._context_manager.push(ctx)
         return ctx
 
@@ -80,33 +80,42 @@ class Sampler:
 def sample(
     interval: int,
     output_threshold: int,
-    output_directory: str,
+    output_path: str,
     auto_start_timer: bool = True,
+    output_repo: OutputRepository = None,
 ):
     """
     A decorator function which simplify the use of "sampler" class.
 
     Usage:
-        @sample(10, 100, "/tmp/pysample")
+        @sample(10, 100, "/tmp/pysample/foo.txt")
         def foo():
             pass
 
         Sample the "foo" function every 10 milliseconds, if the function execution time
-        is greater than 100ms, it will store the stacks information to the given output directory.
+        is greater than 100ms, it will store the stacks information to the given output path.
 
     :param interval:
         Sampling interval (in milliseconds)
+        The minimum interval value is 5. By default, the GIL will be released after
+        5 milliseconds, so that other threads can have a chance to acquire the GIL.
     :param output_threshold:
         Output threshold (in milliseconds)
-    :param output_directory:
-        Store the sampling result in the "output_directory"
+    :param output_path:
+        Store the sampling result to the output path
     :param auto_start_timer:
         Start timer before sampling
+    :param output_repo:
+        If the "output_repo" argument is specified, the "output_path" argument will be discarded.
     :return:
     """
+    if interval < 5:
+        interval = 5
+
     context_manager = SampleContextManager.get_default_instance()
     context_factory = ThreadContextFactory()
-    output_repo = FileRepository(output_directory)
+    if output_repo is None:
+        output_repo = FileRepository(output_path)
 
     if auto_start_timer and not timer_started():
         start_timer(ThreadSampleTimer(interval, context_manager))

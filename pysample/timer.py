@@ -47,6 +47,9 @@ class ThreadSampleTimer(SampleTimer):
             Sampling interval (in milliseconds)
         :param context_manager:
         """
+        if interval < 5:
+            raise ValueError("Interval must be greater than 5")
+
         self._thread = None
         self._active = False
         self._interval = interval

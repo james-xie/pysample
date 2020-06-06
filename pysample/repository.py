@@ -1,7 +1,10 @@
 import os
 import datetime
+import logging
 
 from pysample.context import SampleContext
+
+logger = logging.getLogger(__name__)
 
 
 class OutputRepository:
@@ -14,6 +17,37 @@ class OutputRepository:
 
 
 class FileRepository(OutputRepository):
+    """
+    Storing sampling results to the file.
+    """
+
+    def __init__(self, filename: str, overwrite: bool = True):
+        """
+        :param filename:
+            Storing sampling results to the file.
+        """
+        self._filename = filename
+        self._overwrite = overwrite
+        self._prepare(filename, overwrite)
+
+    def _prepare(self, filename: str, overwrite: bool):
+        if os.path.exists(filename):
+            if not os.path.isfile(filename):
+                raise RuntimeError(f"{filename} is not a file.")
+            elif overwrite:
+                logger.warning(f"File {filename} already exists.")
+            else:
+                raise RuntimeError("File {filename} already exists.")
+
+    def store(self, sample_context: SampleContext):
+        if not self._overwrite and os.path.exists(self._filename):
+            return
+
+        with open(self._filename, 'w') as file:
+            file.write(sample_context.flame_output())
+
+
+class DirectoryRepository(OutputRepository):
     """
     Store the sampling result to the given directory.
     """
