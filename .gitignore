@@ -1,0 +1,48 @@
+# Temp files
+*~
+*.bak
+*.backup
+\#*
+.\#*
+*\#
+*.sav
+*.save
+*.autosav
+*.autosave
+*.swp
+*.swap
+pysample/_cython/sample.c
+
+# Temp folders
+cython_test/
+
+# Generated binaries
+*.egg-info
+*.pot
+*.py[co]
+*.a
+*.o
+*.so
+*.lo
+*.la
+*.Po
+*.Plo
+*.out
+
+# Generated folders
+.idea/
+bin/
+build/
+release/
+debug/
+cmake-build-debug/
+__pycache__
+dist/
+docs/_build/
+docs/locale/
+tests/coverage_html/
+tests/.coverage
+tests/report/
+MANIFEST
+third_party/
+cython_debug/
