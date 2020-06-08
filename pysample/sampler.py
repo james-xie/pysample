@@ -114,8 +114,11 @@ def sample(
 
     context_manager = SampleContextManager.get_default_instance()
     context_factory = ThreadContextFactory()
-    if output_repo is None:
-        output_repo = FileRepository(output_path)
+    if not output_repo:
+        if output_path:
+            output_repo = FileRepository(output_path)
+        else:
+            raise ValueError("Either 'output_repo' or 'output_path' is required")
 
     if auto_start_timer and not timer_started():
         start_timer(ThreadSampleTimer(interval, context_manager))

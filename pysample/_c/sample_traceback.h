@@ -17,7 +17,6 @@
 typedef struct {
     int lineno;
     PyObject *filename;
-    PyObject *name;
     PyObject *co_name;
 } SampleFrame;
 
@@ -36,6 +35,8 @@ void SampleTraceback_Free(SampleTraceback *traceback);
 size_t SampleTraceback_Hash(SampleTraceback *traceback);
 
 int SampleTraceback_Compare(SampleTraceback *tb1, SampleTraceback *tb2);
+
+PyObject *shorten_filename(PyObject *filename);
 
 PyObject *SampleTraceback_Dump(SampleTraceback *traceback);
 

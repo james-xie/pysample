@@ -80,3 +80,4 @@ class DirectoryRepository(OutputRepository):
         filename = f"{self._directory}/{sample_context.name}-{curtime}.txt"
         with open(filename, 'w') as file:
             file.write(sample_context.flame_output())
+

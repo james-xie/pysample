@@ -1,3 +1,5 @@
+import os
+import sys
 import inspect
 import unittest
 from types import FrameType
@@ -26,17 +28,27 @@ class TestContext(unittest.TestCase):
 
         _inner()
 
+    def _shorten_filename(self, filename: str) -> str:
+        for path in sys.path:
+            path_len = len(path)
+            if filename.startswith(path):
+                if len(filename) > path_len and filename[path_len] == os.path.sep:
+                    return filename[path_len+1:]
+                return filename[path_len:]
+        return filename
+
     def _serialize_frame(self, frame: FrameType) -> str:
         f_items = []
+
         while frame is not None:
             item = (
                 frame.f_code.co_name,
+                self._shorten_filename(frame.f_code.co_filename),
                 frame.f_lineno,
-                frame.f_globals.get("__name__"),
             )
             f_items.append(item)
             frame = frame.f_back
-        return ";".join("%s:%s (%s)" % _ for _ in f_items[::-1])
+        return ";".join("%s (%s:%s)" % _ for _ in f_items[::-1])
 
     def assert_output_equal(self, expect: str, target: str):
         exp_output = set(expect.splitlines())

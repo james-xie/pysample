@@ -178,6 +178,7 @@ PyObject *SampleCounter_FlameOutput(SampleCounter *counter) {
         }
 
         item_str = PyUnicode_FromFormat("%U %d\n", tb_str, point->count);
+        Py_DECREF(tb_str);
         if (item_str == NULL) {
             goto error;
         }
