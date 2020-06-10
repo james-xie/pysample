@@ -60,7 +60,7 @@ class ThreadSampleTimer(SampleTimer):
     def start(self):
         assert not self._active
         self._active = True
-        self._thread = threading.Thread(target=self._do_sample, name="SampleTimer")
+        self._thread = threading.Thread(target=self._do_sample, name="PySample.ThreadSampleTimer")
         self._thread.setDaemon(True)
         self._thread.start()
 
