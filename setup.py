@@ -8,9 +8,8 @@ if not ENABLE_DEBUG:
 else:
     print("debug mode...")
 
-PACKAGE_PATH = "pysample"
 
-PACKAGES = setuptools.find_packages(PACKAGE_PATH)
+PACKAGES = setuptools.find_packages()
 
 EXTENSION_INCLUDE_DIRECTORIES = [
     "pysample/_c/",

@@ -151,28 +151,29 @@ int SampleCounter_AddFrame(SampleCounter *counter, PyObject *frame) {
  * @param counter
  * @return
  */
-PyObject *SampleCounter_FlameOutput(SampleCounter *counter) {
-    int res;
+PyObject *SampleCounter_FlameOutput(SampleCounter *counter, PyObject *sys_path) {
+    int i;
     SamplePoint *point;
     HashMapEntry *entry;
     HashMapIterator iterator;
     PyObject *empty_sep = NULL;
     PyObject *item_str = NULL, *tb_str = NULL, *str_buffer = NULL, *output = NULL;
 
-    str_buffer = PyList_New(0);
-    if (str_buffer == NULL) {
-        goto error;
-    }
-
     if (counter->points->used <= 0) {
         return PyUnicode_FromString("");
     }
 
+    str_buffer = PyList_New(counter->points->used);
+    if (str_buffer == NULL) {
+        goto error;
+    }
+
     HASH_MAP_ITERATOR_INIT(&iterator, counter->points);
 
+    i = 0;
     while ((entry = HashMap_Next(&iterator)) != NULL) {
         point = entry->val;
-        tb_str = SampleTraceback_Dump(point->traceback);
+        tb_str = SampleTraceback_Dump(point->traceback, sys_path);
         if (tb_str == NULL) {
             goto error;
         }
@@ -183,12 +184,10 @@ PyObject *SampleCounter_FlameOutput(SampleCounter *counter) {
             goto error;
         }
 
-        res = PyList_Append(str_buffer, item_str);
-        if (res != 0) {
-            goto error;
-        }
-        Py_DECREF(item_str);
+        PyList_SET_ITEM(str_buffer, i, item_str);
         item_str = NULL;
+
+        i++;
     }
 
     empty_sep = PyUnicode_FromString("");

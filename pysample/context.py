@@ -19,14 +19,14 @@ class SampleContext:
         self._delta = 0
         self._total_count = 0
         self._start_time = time.time()
-        self._points = PySampleCounter(delta)
+        self._counter = PySampleCounter(delta)
 
     def collect(self, frame: FrameType):
-        self._points.add_frame(frame)
+        self._counter.add_frame(frame)
         self._total_count += self._delta
 
     def flame_output(self) -> str:
-        return self._points.flame_output()
+        return self._counter.flame_output()
 
     @property
     def name(self) -> str:

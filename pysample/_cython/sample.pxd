@@ -7,10 +7,12 @@ cdef extern from "sample.h":
 
     int SampleCounter_AddFrame(SampleCounter *counter, object frame);
 
-    object SampleCounter_FlameOutput(SampleCounter *counter);
+    object SampleCounter_FlameOutput(SampleCounter *counter, object sys_path);
 
 
 cdef class PySampleCounter:
+    cdef object _sys_path
     cdef SampleCounter *_counter
+
 
     

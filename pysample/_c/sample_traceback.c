@@ -3,6 +3,7 @@
 //
 
 #include <stdio.h>
+#include <string.h>
 #include "sample_traceback.h"
 
 #define PyHASH_MULTIPLIER 1000003UL  /* 0xf4243 */
@@ -224,6 +225,31 @@ static PackagePathArray *get_path_array() {
 }
 
 
+static void add_path_to_array(PackagePathArray *path_array, PyObject *path) {
+    int i;
+    PyObject *item;
+    Py_ssize_t path_len = PyUnicode_GET_LENGTH(path);
+
+    for (i=0; i<path_array->length; i++) {
+        item = path_array->array[i];
+        if (path_len >= PyUnicode_GET_LENGTH(item)) {
+            void* src = (char *)path_array->array + i * sizeof(PyObject *);
+            void* dest = (char *)src + sizeof(PyObject *);
+            size_t size = (path_array->length - i) * sizeof(PyObject *);
+            memmove(dest, src, size);
+
+            Py_INCREF(path);
+            path_array->array[i] = path;
+            path_array->length++;
+            return;
+        }
+    }
+
+    Py_INCREF(path);
+    path_array->array[path_array->length++] = path;
+}
+
+
 static inline PyObject *strip_package_path(PyObject *filename, PyObject *package_path) {
     int len = PyUnicode_GET_LENGTH(package_path);
     int name_len = PyUnicode_GET_LENGTH(filename);
@@ -237,28 +263,14 @@ static inline PyObject *strip_package_path(PyObject *filename, PyObject *package
 }
 
 
-PyObject *shorten_filename(PyObject *filename) {
-    static PyObject *sys_module = NULL;
-
-    int n, len;
-    PyObject *sys_path, *item;
+PyObject *shorten_filename(PyObject *filename, PyObject *sys_path) {
+    int n;
+    Py_ssize_t len;
+    PyObject *item;
     PackagePathArray *path_array = get_path_array();
 
     if (path_array == NULL) {
         return NULL;
-    }
-
-    if (sys_module == NULL) {
-        PyObject *sys_str = PyUnicode_FromString("sys");
-        if (sys_str == NULL) {
-            return NULL;
-        }
-
-        sys_module = PyImport_GetModule(sys_str);
-        Py_DECREF(sys_str);
-        if (sys_module == NULL) {
-            return NULL;
-        }
     }
 
     // The filename starts with the path in the cached path array.
@@ -272,16 +284,11 @@ PyObject *shorten_filename(PyObject *filename) {
 
     // The cached path array cannot be used to shorten the file name, so we
     // try to strip the prefix path that starts with the path in sys.path.
-    PyObject *path_str = PyUnicode_FromString("path");
-    if (path_str == NULL) {
-        return NULL;
+    if (sys_path == NULL || sys_path == Py_None) {
+        return filename;
     }
 
-    sys_path = PyObject_GetAttr(sys_module, path_str);
-    Py_DECREF(path_str);
-    if (sys_path == NULL) {
-        return NULL;
-    }
+    assert(PyList_Check(sys_path));
 
     for (n=0; n<PyList_GET_SIZE(sys_path); n++) {
         item = PyList_GET_ITEM(sys_path, n);
@@ -292,34 +299,30 @@ PyObject *shorten_filename(PyObject *filename) {
 
         if (PyUnicode_Find(filename, item, 0, len, 1) >= 0) {
             PyObject *substring = strip_package_path(filename, item);
-            Py_INCREF(item);
-            path_array->array[path_array->length++] = item;
-            Py_DECREF(sys_path);
+            add_path_to_array(path_array, item);
             return substring;
         }
     }
 
-    Py_DECREF(sys_path);
     return NULL;
 }
 
 
-PyObject *SampleTraceback_Dump(SampleTraceback *traceback) {
-    int res;
-    int n = traceback->nframe;
+PyObject *SampleTraceback_Dump(SampleTraceback *traceback, PyObject *sys_path) {
+    int i, n = traceback->nframe;
     SampleFrame *frame;
     PyObject *empty_sep = NULL, *filename;
     PyObject *item_str = NULL, *str_buffer = NULL, *tb_string = NULL;
 
-    str_buffer = PyList_New(0);
+    str_buffer = PyList_New(n);
     if (str_buffer == NULL) {
         return NULL;
     }
 
-    while (--n >= 0) {
-        frame = &traceback->frames[n];
+    for (i=0; i<n; i++) {
+        frame = &traceback->frames[n-i-1];
 
-        filename = shorten_filename(frame->filename);
+        filename = shorten_filename(frame->filename, sys_path);
         if (filename == NULL) {
             filename = frame->filename;
         }
@@ -332,11 +335,7 @@ PyObject *SampleTraceback_Dump(SampleTraceback *traceback) {
             goto error;
         }
 
-        res = PyList_Append(str_buffer, item_str);
-        if (res != 0) {
-            goto error;
-        }
-        Py_DECREF(item_str);
+        PyList_SET_ITEM(str_buffer, i, item_str);
         item_str = NULL;
     }
 

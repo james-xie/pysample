@@ -33,7 +33,7 @@ int SampleCounter_AddFrame(SampleCounter *counter, PyObject *frame);
 
 int SampleCounter_AddTraceback(SampleCounter *counter, SampleTraceback *traceback);
 
-PyObject *SampleCounter_FlameOutput(SampleCounter *counter);
+PyObject *SampleCounter_FlameOutput(SampleCounter *counter, PyObject *sys_path);
 
 
 #endif //PYSAMPLE_SAMPLE_COUNTER_H
