@@ -4,14 +4,18 @@
 
 #include "sample_counter.h"
 
-#define DEFAULT_PATH_ARRAY_SIZE 10
-
 
 #ifdef MS_WINDOWS
 #define PATH_SEPARATOR '\\'
 #else
 #define PATH_SEPARATOR '/'
 #endif
+
+#define DEFAULT_PATH_ARRAY_SIZE 10
+
+#define DEFAULT_OUTPUT_BUFFER_SIZE 4096 // 4kb
+
+#define AVAILABLE_BUFFER_SIZE(buffer) ((buffer)->max_size - (buffer)->size)
 
 
 
@@ -176,12 +180,18 @@ int SampleCounter_AddFrame(SampleCounter *counter, PyObject *frame) {
 }
 
 
-
 typedef struct {
     int length;
     int max_length;
     PyObject *array[DEFAULT_PATH_ARRAY_SIZE];
 } PackagePathArray;
+
+
+typedef struct {
+    int size;
+    int max_size;
+    char *buf;
+} OutputBuffer;
 
 
 static PackagePathArray *get_path_array() {
@@ -250,6 +260,18 @@ static inline PyObject *strip_package_path(PyObject *filename, PyObject *package
 }
 
 
+/**
+ * Shorten the filename by strip the prefix path that starts with the path in sys.path.
+ * The array of sys.path should be sorted by path length, because we traverse the
+ * sys.path array in order, if the filename is startswith the path, we will strip
+ * the path prefix and return directly.
+ *
+ * @param filename
+ *      full filename
+ * @param counter
+ *      sampling counter
+ * @return
+ */
 PyObject *shorten_filename(PyObject *filename, SampleCounter *counter) {
     int n, res;
     Py_ssize_t len;
@@ -316,16 +338,78 @@ PyObject *shorten_filename(PyObject *filename, SampleCounter *counter) {
 }
 
 
-PyObject *dump_traceback(SampleCounter *counter, SampleTraceback *traceback) {
-    int i, n = traceback->nframe;
-    SampleFrame *frame;
-    PyObject *empty_sep = NULL, *filename;
-    PyObject *item_str = NULL, *str_buffer = NULL, *tb_string = NULL;
+/**
+ * Check whether the available output buffer capacity is greater than the given size,
+ * if false, double the output buffer.
+ *
+ * @param buffer
+ * @param size
+ * @return
+ */
+static inline int check_buffer_capacity(OutputBuffer *buffer, int size) {
+    char *new_buf;
 
-    str_buffer = PyList_New(n);
-    if (str_buffer == NULL) {
-        return NULL;
+    if (size > AVAILABLE_BUFFER_SIZE(buffer)) {
+        new_buf = PyMem_Realloc(buffer->buf, buffer->max_size * 2);
+        if (new_buf == NULL) {
+            return -1;
+        }
+
+        buffer->buf = new_buf;
+        buffer->max_size *= 2;
     }
+
+    return 0;
+}
+
+
+static int write_string_to_output(OutputBuffer *buffer, const char *str) {
+    int len;
+
+    assert(str != NULL);
+
+    len = strlen(str);
+    if (check_buffer_capacity(buffer, len) == -1) {
+        return -1;
+    }
+
+    memcpy(buffer->buf + buffer->size, str, len);
+    buffer->size += len;
+    return 0;
+}
+
+
+static int write_int_to_output(OutputBuffer *buffer, int num) {
+    char num_buf[11];
+
+    sprintf(num_buf, "%d", num);
+    return write_string_to_output(buffer, num_buf);
+}
+
+
+static int write_eof_to_output(OutputBuffer *buffer) {
+    if (check_buffer_capacity(buffer, 1) == -1) {
+        return -1;
+    }
+
+    buffer->buf[buffer->size] = '\0';
+    return 0;
+}
+
+
+/**
+ * Dump traceback to output buffer.
+ *
+ * @param counter
+ * @param traceback
+ * @param buffer
+ * @return
+ */
+int dump_traceback(SampleCounter *counter, SampleTraceback *traceback, OutputBuffer *buffer) {
+    int i, res, n = traceback->nframe;
+    const char *utf8_str;
+    SampleFrame *frame;
+    PyObject *filename;
 
     for (i=0; i<n; i++) {
         frame = &traceback->frames[n-i-1];
@@ -333,34 +417,51 @@ PyObject *dump_traceback(SampleCounter *counter, SampleTraceback *traceback) {
         filename = shorten_filename(frame->filename, counter);
         if (filename == NULL) {
             filename = frame->filename;
+            Py_INCREF(filename);
         }
 
-        item_str = PyUnicode_FromFormat("%U (%U:%d);", frame->co_name, filename, frame->lineno);
-        if (filename != frame->filename) {
+        utf8_str = PyUnicode_AsUTF8(frame->co_name);
+        if (utf8_str == NULL) {
             Py_DECREF(filename);
+            return -1;
         }
-        if (item_str == NULL) {
-            goto error;
+        res = write_string_to_output(buffer, utf8_str);
+        Py_DECREF(filename);
+        if (res == -1) {
+            return -1;
         }
 
-        PyList_SET_ITEM(str_buffer, i, item_str);
-        item_str = NULL;
+        res = write_string_to_output(buffer, " (");
+        if (res == -1) {
+            return -1;
+        }
+
+        utf8_str = PyUnicode_AsUTF8(filename);
+        if (utf8_str == NULL) {
+            return -1;
+        }
+        res = write_string_to_output(buffer, utf8_str);
+        if (res == -1) {
+            return -1;
+        }
+
+        res = write_string_to_output(buffer, ":");
+        if (res == -1) {
+            return -1;
+        }
+
+        res = write_int_to_output(buffer, frame->lineno);
+        if (res == -1) {
+            return -1;
+        }
+
+        res = write_string_to_output(buffer, ");");
+        if (res == -1) {
+            return -1;
+        }
     }
 
-    empty_sep = PyUnicode_FromString("");
-    if (empty_sep == NULL) {
-        goto error;
-    }
-
-    tb_string = PyUnicode_Join(empty_sep, str_buffer);
-    Py_DECREF(empty_sep);
-    Py_DECREF(str_buffer);
-    return tb_string;
-
-error:
-    Py_XDECREF(item_str);
-    Py_XDECREF(str_buffer);
-    return NULL;
+    return 0;
 }
 
 
@@ -375,20 +476,29 @@ error:
  * @return
  */
 PyObject *SampleCounter_FlameOutput(SampleCounter *counter) {
-    int i;
+    int i, res;
     SamplePoint *point;
     HashMapEntry *entry;
     HashMapIterator iterator;
-    PyObject *empty_sep = NULL;
-    PyObject *item_str = NULL, *tb_str = NULL, *str_buffer = NULL, *output = NULL;
+    OutputBuffer *buffer = NULL;
+    PyObject *output = NULL;
 
     if (counter->points->used <= 0) {
         return PyUnicode_FromString("");
     }
 
-    str_buffer = PyList_New(counter->points->used);
-    if (str_buffer == NULL) {
-        goto error;
+    buffer = PyMem_Malloc(sizeof(OutputBuffer));
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    buffer->size = 0;
+    buffer->max_size = DEFAULT_OUTPUT_BUFFER_SIZE;
+
+    buffer->buf = PyMem_Malloc(DEFAULT_OUTPUT_BUFFER_SIZE);
+    if (buffer->buf == NULL) {
+        PyMem_Free(buffer);
+        return NULL;
     }
 
     HASH_MAP_ITERATOR_INIT(&iterator, counter->points);
@@ -396,37 +506,43 @@ PyObject *SampleCounter_FlameOutput(SampleCounter *counter) {
     i = 0;
     while ((entry = HashMap_Next(&iterator)) != NULL) {
         point = entry->val;
-        tb_str = dump_traceback(counter, point->traceback);
-        if (tb_str == NULL) {
+        res = dump_traceback(counter, point->traceback, buffer);
+        if (res == -1) {
             goto error;
         }
 
-        item_str = PyUnicode_FromFormat("%U %d\n", tb_str, point->count);
-        Py_DECREF(tb_str);
-        if (item_str == NULL) {
+        res = write_string_to_output(buffer, " ");
+        if (res == -1) {
             goto error;
         }
 
-        PyList_SET_ITEM(str_buffer, i, item_str);
-        item_str = NULL;
+        res = write_int_to_output(buffer, point->count);
+        if (res == -1) {
+            goto error;
+        }
+
+        res = write_string_to_output(buffer, "\n");
+        if (res == -1) {
+            goto error;
+        }
 
         i++;
     }
 
-    empty_sep = PyUnicode_FromString("");
-    if (empty_sep == NULL) {
+    res = write_eof_to_output(buffer);
+    if (res == -1) {
         goto error;
     }
 
-    output = PyUnicode_Join(empty_sep, str_buffer);
-    Py_DECREF(empty_sep);
-    Py_DECREF(str_buffer);
+    output = PyUnicode_FromString(buffer->buf);
+    PyMem_Free(buffer->buf);
+    PyMem_Free(buffer);
     return output;
 
 error:
-    Py_XDECREF(empty_sep);
-    Py_XDECREF(item_str);
-    Py_XDECREF(tb_str);
-    Py_XDECREF(str_buffer);
+    if (buffer) {
+        PyMem_Free(buffer->buf);
+        PyMem_Free(buffer);
+    }
     return NULL;
 }
