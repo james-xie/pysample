@@ -6,10 +6,9 @@ from pysample.context import SampleContext
 from pysample.repository import OutputRepository
 from pysample.sampler import sample, Sampler
 from pysample.transport import ThreadTransport
-from flask import Flask, g, request
+from flask import Flask, g, request, Response
 
-
-CONTEXT_FIELD_NAME = '__pysample_context'
+CONTEXT_FIELD_NAME = "__pysample_context"
 logger = logging.getLogger("pysample.flask")
 
 
@@ -20,6 +19,7 @@ class RemoteRepository(OutputRepository):
     def store(self, sample_context: SampleContext):
         data = self._client.build_data(
             name=sample_context.name,
+            sample_id=sample_context.ident,
             stack_info=sample_context.flame_output(),
             execution_time=sample_context.lifecycle,
         )
@@ -47,12 +47,16 @@ class FlaskSample(object):
         return ThreadTransport()
 
     def _make_client(self, url: str) -> Client:
-        return Client(url, self._default_transport())
+        transport = self._default_transport()
+        transport.start()
+        return Client(url, transport)
 
     def init_app(self, app: Flask):
-        self._sampler = sample(self._interval, self._output_threshold)
+        repo = RemoteRepository(self._client)
+        self._sampler = sample(self._interval, self._output_threshold, output_repo=repo)
 
         app.before_request(self.before_request)
+        app.after_request(self.after_request)
         app.teardown_request(self.teardown_request)
 
     def before_request(self):
@@ -60,9 +64,20 @@ class FlaskSample(object):
         ctx = self._sampler.begin(name)
         setattr(g, CONTEXT_FIELD_NAME, ctx)
 
-    def teardown_request(self):
+    def after_request(self, response: Response) -> Response:
         ctx = getattr(g, CONTEXT_FIELD_NAME, None)
         if ctx:
             self._sampler.end(ctx)
+            delattr(g, CONTEXT_FIELD_NAME)
+
+            response.headers["X-PySample-ID"] = f"{self._client.project}/{ctx.ident}"
         else:
             logger.error("Cannot get sample context from flask.g in teardown request")
+        return response
+
+    def teardown_request(self, err):
+        del err
+        ctx = getattr(g, CONTEXT_FIELD_NAME, None)
+        if ctx:
+            self._sampler.end(ctx)
+            delattr(g, CONTEXT_FIELD_NAME)

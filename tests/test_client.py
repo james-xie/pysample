@@ -1,5 +1,6 @@
 import json
 import zlib
+import uuid
 import unittest
 from mock import MagicMock
 
@@ -34,6 +35,7 @@ class TestClient(unittest.TestCase):
         client = self._make_test_client(mock_transport)
         data = client.build_data(
             "/rest/sample/list",
+            uuid.uuid4().hex,
             "mock stack info",
             20,
         )

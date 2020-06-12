@@ -1,5 +1,6 @@
 import sys
 import time
+import math
 import threading
 
 from pysample.context import SampleContext, SampleContextFactory, SampleContextManager
@@ -80,7 +81,7 @@ class ThreadSampleTimer(SampleTimer):
                 context.collect(frame)
 
             end = time.time()
-            elapsed_time = end - start
+            elapsed_time = math.ceil((end - start) * 1000) / 1000
             time.sleep(self._interval_ms - elapsed_time)
 
 

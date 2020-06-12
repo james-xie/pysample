@@ -4,7 +4,10 @@ from types import FrameType
 
 cdef class PySampleCounter:
     def __cinit__(self, int delta):
-        self._counter = SampleCounter_Create(delta, sorted(sys.path, key=len))
+
+        self._counter = SampleCounter_Create(
+            delta, sorted(sys.path, key=len, reverse=True)
+        )
         if self._counter == NULL:
             raise RuntimeError
 

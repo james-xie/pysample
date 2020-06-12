@@ -275,7 +275,7 @@ static inline PyObject *strip_package_path(PyObject *filename, PyObject *package
 PyObject *shorten_filename(PyObject *filename, SampleCounter *counter) {
     int n, res;
     Py_ssize_t len;
-    PyObject *item, *short_filename = NULL;
+    PyObject *item, *long_item, *short_filename = NULL;
     PyObject *sys_path = counter->sys_path;
     PackagePathArray *path_array = get_path_array();
 
@@ -329,6 +329,16 @@ PyObject *shorten_filename(PyObject *filename, SampleCounter *counter) {
                 Py_INCREF(short_filename);
             }
 
+            // Fix the matching path is too short to strip the complete package path.
+            // So traverse the sys_path array again, and if the long path is starts
+            // with the matching path, add it to the cached path array.
+            while (--n >= 0) {
+                long_item = PyList_GET_ITEM(sys_path, n);
+                len = PyUnicode_GET_LENGTH(long_item);
+                if (PyUnicode_Find(long_item, item, 0, len, 1) >= 0) {
+                    add_path_to_array(path_array, long_item);
+                }
+            }
             add_path_to_array(path_array, item);
             return short_filename;
         }

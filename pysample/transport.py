@@ -7,7 +7,7 @@ from time import sleep
 from typing import Dict
 
 
-logger = logging.getLogger("pysample.transport")
+logger = logging.getLogger(__name__)
 
 
 class Transport(object):
@@ -37,10 +37,10 @@ class ThreadTransport(Transport):
         try:
             if not self.is_alive():
                 name = "PySample.ThreadTransport"
+                self._active = True
                 self._thread = threading.Thread(target=self._run, name=name)
                 self._thread.setDaemon(True)
                 self._thread.start()
-                self._active = True
         finally:
             self._lock.release()
 
@@ -55,7 +55,8 @@ class ThreadTransport(Transport):
             response = urlopen(
                 url=Request(url, headers=headers), data=data, timeout=self._send_timeout
             )
-        except HTTPError:
+        except HTTPError as e:
+            logger.error(str(e), stack_info=True)
             raise
         return response
 
@@ -65,7 +66,7 @@ class ThreadTransport(Transport):
             try:
                 self._send_request(url, headers, data)
             except Exception:
-                logger.error("Failed to send request", stack_info=True)
+                logger.error(f"Failed to send request to {url}")
             finally:
                 self._queue.task_done()
 

@@ -1,6 +1,7 @@
 import os
 import zlib
 import json
+import logging
 import datetime
 import subprocess
 from tempfile import NamedTemporaryFile
@@ -18,6 +19,7 @@ from werkzeug.exceptions import BadRequest
 
 app = Flask("PySample")
 errors = Blueprint("errors", __name__)
+logger = logging.getLogger(__name__)
 
 # example: mysql+pymysql://{user}:{password}@{host}/{database}?charset=utf8mb4
 if "DATABASE_URL" not in os.environ:
@@ -78,10 +80,13 @@ def handle_error(error):
     message = [str(x) for x in error.args]
     status_code = 500
     success = False
+
+    error_type = error.__class__.__name__
     response = {
         "success": success,
-        "error": {"type": error.__class__.__name__, "message": message},
+        "error": {"type": error_type, "message": message},
     }
+    logger.error(f"{error_type}: {str(error)}")
 
     return jsonify(response), status_code
 

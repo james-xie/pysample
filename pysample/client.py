@@ -1,6 +1,5 @@
 import os
 import re
-import uuid
 import zlib
 import json
 import time
@@ -15,7 +14,11 @@ class Client(object):
     def __init__(self, url: str, transport: Transport):
         self._url, self._project = self.parse_url(url)
         self._transport = transport
-        self._add_url = f"{self._url}/{self._project}/sample/add"
+        self._add_url = f"{self._url}/sample/add/{self._project}"
+
+    @property
+    def project(self) -> str:
+        return self._project
 
     @classmethod
     def parse_url(cls, url: str) -> Tuple[str, str]:
@@ -68,23 +71,25 @@ class Client(object):
         self._transport.send(self._add_url, headers, message)
 
     def build_data(
-        self, name: str, stack_info: str, execution_time: int, **kwargs
+        self, name: str, sample_id: str, stack_info: str, execution_time: int, **kwargs
     ) -> Dict[str, Any]:
         return {
             "name": name,
+            "sample_id": sample_id,
             "stack_info": stack_info,
             "execution_time": execution_time,
             **kwargs,
         }
 
-    def capture(self, data: Dict[str, Any]):
+    def capture(self, data: Dict[str, Any]) -> Dict[str, Any]:
         assert "name" in data, "'name' is required."
+        assert "sample_id" in data, "'sample_id' is required."
         assert "stack_info" in data, "'stack_info' is required."
         assert "execution_time" in data, "'execution_time' is required."
 
         data = dict(data)
-        data.setdefault("sample_id", uuid.uuid4().hex)
         data.setdefault("process_id", os.getpid())
         data.setdefault("thread_id", threading.current_thread().ident)
         data.setdefault("timestamp", time.time())
         self.send(data)
+        return data

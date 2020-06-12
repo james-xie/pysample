@@ -1,4 +1,5 @@
 import time
+import uuid
 import logging
 import threading
 
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 class SampleContext:
     def __init__(self, name: str, delta: int):
         self._name = name
+        self._uuid = uuid.uuid4().hex
         self._delta = 0
         self._total_count = 0
         self._start_time = time.time()
@@ -31,6 +33,10 @@ class SampleContext:
     @property
     def name(self) -> str:
         return self._name
+
+    @property
+    def ident(self) -> str:
+        return self._uuid
 
     @property
     def lifecycle(self) -> int:
