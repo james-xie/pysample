@@ -4,10 +4,9 @@ from types import FrameType
 
 cdef class PySampleCounter:
     def __cinit__(self, int delta):
-        self._counter = SampleCounter_Create(delta)
+        self._counter = SampleCounter_Create(delta, sorted(sys.path, key=len))
         if self._counter == NULL:
             raise RuntimeError
-        self._sys_path = None
 
     def __dealloc__(self):
         if self._counter:
@@ -25,6 +24,4 @@ cdef class PySampleCounter:
             raise RuntimeError
 
     def flame_output(self) -> str:
-        if self._sys_path is None or len(sys.path) != self._sys_path:
-            self._sys_path = sorted(sys.path, key=len)
-        return SampleCounter_FlameOutput(self._counter, self._sys_path)
+        return SampleCounter_FlameOutput(self._counter)

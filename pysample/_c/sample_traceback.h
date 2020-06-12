@@ -36,6 +36,5 @@ size_t SampleTraceback_Hash(SampleTraceback *traceback);
 
 int SampleTraceback_Compare(SampleTraceback *tb1, SampleTraceback *tb2);
 
-PyObject *SampleTraceback_Dump(SampleTraceback *traceback, PyObject *sys_path);
 
 #endif //PYSAMPLE_SAMPLE_TRACEBACK_H

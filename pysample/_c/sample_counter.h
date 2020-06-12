@@ -20,12 +20,14 @@ typedef struct {
 
 typedef struct {
     int delta;
+    PyObject *sys_path;
     HashMap *filenames;         // filename deduplication
+    HashMap *short_filenames;   // short filenames cache
     HashMap *points;            // map SampleTraceback to SamplePoint
 } SampleCounter;
 
 
-SampleCounter *SampleCounter_Create(int delta);
+SampleCounter *SampleCounter_Create(int delta, PyObject *sys_path);
 
 void SampleCounter_Free(SampleCounter *counter);
 
@@ -33,7 +35,7 @@ int SampleCounter_AddFrame(SampleCounter *counter, PyObject *frame);
 
 int SampleCounter_AddTraceback(SampleCounter *counter, SampleTraceback *traceback);
 
-PyObject *SampleCounter_FlameOutput(SampleCounter *counter, PyObject *sys_path);
+PyObject *SampleCounter_FlameOutput(SampleCounter *counter);
 
 
 #endif //PYSAMPLE_SAMPLE_COUNTER_H
