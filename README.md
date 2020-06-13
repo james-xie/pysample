@@ -20,7 +20,7 @@ pip install pysample
 下载[FlameGraph](https://github.com/brendangregg/FlameGraph)
 
 
-#### 分析整个程序的运行性能(无需修改源码)
+### 分析整个程序的运行性能(无需修改源码)
 
 ```shell
 pysample -p /root/FlameGraph/flamegraph.pl -o /tmp/http_request.svg  tests/scripts/http_request.py
@@ -31,7 +31,7 @@ pysample -p /root/FlameGraph/flamegraph.pl -o /tmp/http_request.svg  tests/scrip
 <b>注：火焰图中的每一个sample表示1ms</b>
 
 
-#### 分析程序中某个函数的执行性能
+### 分析程序中某个函数的执行性能
 在ipython中运行如下命令：
 ```python
 from pysample.sampler import sample
@@ -57,7 +57,7 @@ test_foo()
 ![test_foo](./images/test_foo.svg)
 
 
-#### 监控web服务中慢请求的执行情况
+### 监控web服务中慢请求的执行情况
 安装web服务相关依赖
 ```shell
 pip install -r requirements_web.txt
@@ -97,6 +97,8 @@ def slow_request():
 if __name__ == '__main__':
     app.run(host="127.0.0.1", port=10001)
 ```
+
+查看慢请求的火焰图:
 ![web application demo](./images/web_app_demo.gif)
 
 另外，还可以根据X-PySample-ID直接访问url "/sample/flamegraph/<project>/<sample_id>"来查看火焰图.

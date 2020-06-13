@@ -58,8 +58,16 @@ else:
 
 install_requires = []
 
+VERSION = '1.0.0'
+
 setup(
     name="pysample",
+    version=VERSION,
+    description="Sampling profiler for Python programs",
+    author='James Xie',
+    author_email='yanyin0703@163.com',
+    url='https://github.com/James-xie/pysample',
+    license='MIT',
     packages=list(PACKAGES),
     install_requires=install_requires,
     ext_modules=CYTHON_EXTENSION_MODULES,
