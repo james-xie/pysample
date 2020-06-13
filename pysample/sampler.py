@@ -79,7 +79,7 @@ class Sampler:
 
 def sample(
     interval: int,
-    output_threshold: int,
+    output_threshold: int = 0,
     output_path: str = None,
     output_repo: OutputRepository = None,
     auto_start_timer: bool = True,
@@ -101,6 +101,8 @@ def sample(
         5 milliseconds, so that other threads can have a chance to acquire the GIL.
     :param output_threshold:
         Output threshold (in milliseconds)
+        If the function execution time is less than "output_threshold", the sampling
+        result will be discarded.
     :param output_path:
         Store the sampling result to the output path
     :param auto_start_timer:

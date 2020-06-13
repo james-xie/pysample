@@ -1,4 +1,5 @@
 import os
+import sys
 import setuptools
 from distutils.core import setup, Extension
 
@@ -32,6 +33,13 @@ else:
     CYTHON_EXTENSION_SOURCES.append("pysample/_cython/sample.c")
 
 
+version = sys.version_info[:2]
+if version < (3, 7):
+    print('pysample requires Python version 3.7 or later' +
+          ' ({}.{} detected).'.format(*version))
+    sys.exit(-1)
+
+
 ext = [
     Extension(
         "pysample._cython.sample",
@@ -48,8 +56,14 @@ if not ENABLE_DEBUG:
 else:
     CYTHON_EXTENSION_MODULES = ext
 
+install_requires = []
+
 setup(
     name="pysample",
     packages=list(PACKAGES),
+    install_requires=install_requires,
     ext_modules=CYTHON_EXTENSION_MODULES,
+    entry_points={
+        'console_scripts': ['pysample=pysample.command_line:main'],
+    }
 )

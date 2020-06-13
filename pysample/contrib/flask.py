@@ -13,6 +13,10 @@ logger = logging.getLogger("pysample.flask")
 
 
 class RemoteRepository(OutputRepository):
+    """
+    Store the sampling results to the remote server.
+    """
+
     def __init__(self, client: Client):
         self._client = client
 
@@ -27,13 +31,40 @@ class RemoteRepository(OutputRepository):
 
 
 class FlaskSample(object):
+    """
+    Integrate PySample with Flask.
+
+    The FlaskSample object registers hook functions such as
+    before_request/after_request/teardown_request to the Flask application,
+    and it starts two thread to handle sampling timer and remote data transmission
+    separately. Once the "init_app" function is called, the two threads will start
+    automatically.
+    """
+
     def __init__(
         self,
         url: Optional[str] = None,
         client: Optional[Client] = None,
         interval: int = 10,
-        output_threshold: int = 0,
+        output_threshold: int = 100,
     ):
+        """
+        :param url:
+            Remote server url and project name.
+            for example:
+                 http://127.0.0.1:10002/{project_name}
+
+            The project name is required.
+        :param client:
+            Commonly the client object is automatically created with the given url.
+            If the client object is specified, the "url" argument will be ignored.
+        :param interval:
+            Sampling interval (in milliseconds)
+        :param output_threshold:
+            Output threshold (in milliseconds)
+            If the response time is less than "output_threshold", the sampling
+            result will be discarded.
+        """
         if client is None:
             if url is None:
                 raise ValueError("Either url or client is required")
