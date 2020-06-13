@@ -12,8 +12,11 @@ PySample能够更好地与业务场景结合；例如：结合flask/django等web
 ## Installation
 通过pypi安装：
 ```shell
-pip install pysample
+pip install pysample-profiler  # 找不到安装包可以尝试下面一条命令
+pip install pysample-profiler --index-url https://pypi.org/project 
 ```
+
+
 
 ## Quickstart
 

@@ -61,7 +61,7 @@ install_requires = []
 VERSION = '1.0.0'
 
 setup(
-    name="pysample",
+    name="pysample-profiler",
     version=VERSION,
     description="Sampling profiler for Python programs",
     author='James Xie',
