@@ -1,0 +1,5 @@
+flask
+sqlalchemy
+marshmallow
+werkzeug
+flask_admin
