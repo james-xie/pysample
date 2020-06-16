@@ -3,3 +3,5 @@ sqlalchemy
 marshmallow
 werkzeug
 flask_admin
+flask_sqlalchemy
+pymysql
