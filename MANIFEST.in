@@ -1,0 +1,4 @@
+include *.txt
+include LICENSE
+
+recursive-include pysample *.py *.c *.h *.pxd *.pyx

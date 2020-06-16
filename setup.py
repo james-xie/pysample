@@ -4,18 +4,17 @@ import setuptools
 from distutils.core import setup, Extension
 
 
-setup_requires = []
-
 ENABLE_DEBUG = 'SAMPLE_DEBUG' in os.environ
 if not ENABLE_DEBUG:
     try:
         from Cython.Build import cythonize
     except ImportError:
-        print('We could not find Cython. Setup may take 10-20 minutes.\n')
-        setup_requires += ('cython>=0.23',)
+        raise ImportError('We could not find Cython. please install cython first.\n')
 else:
     print("debug mode...")
 
+# Ensure we're in the proper directory whether or not we're being used by pip.
+print(__file__)
 
 PACKAGES = setuptools.find_packages()
 
@@ -63,7 +62,17 @@ if not ENABLE_DEBUG:
 else:
     CYTHON_EXTENSION_MODULES = ext
 
-VERSION = '1.0.1'
+VERSION = '1.0.2'
+
+from distutils.command.build import build as build_orig
+class build(build_orig):
+
+    def finalize_options(self):
+        super().finalize_options()
+        from Cython.Build import cythonize
+        self.distribution.ext_modules = cythonize(self.distribution.ext_modules,
+                                                  language_level=3)
+
 
 setup(
     name="pysample-profiler",
@@ -75,8 +84,9 @@ setup(
     license='MIT',
     packages=list(PACKAGES),
     install_requires=[],
-    setup_requires=setup_requires,
+    setup_requires=[],
     ext_modules=CYTHON_EXTENSION_MODULES,
+    zip_safe=False,
     entry_points={
         'console_scripts': ['pysample=pysample.command_line:main'],
     }
