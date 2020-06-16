@@ -3,9 +3,16 @@ import sys
 import setuptools
 from distutils.core import setup, Extension
 
+
+setup_requires = []
+
 ENABLE_DEBUG = 'SAMPLE_DEBUG' in os.environ
 if not ENABLE_DEBUG:
-    from Cython.Build import cythonize
+    try:
+        from Cython.Build import cythonize
+    except ImportError:
+        print('We could not find Cython. Setup may take 10-20 minutes.\n')
+        setup_requires += ('cython>=0.23',)
 else:
     print("debug mode...")
 
@@ -56,8 +63,6 @@ if not ENABLE_DEBUG:
 else:
     CYTHON_EXTENSION_MODULES = ext
 
-install_requires = []
-
 VERSION = '1.0.1'
 
 setup(
@@ -69,7 +74,8 @@ setup(
     url='https://github.com/James-xie/pysample',
     license='MIT',
     packages=list(PACKAGES),
-    install_requires=install_requires,
+    install_requires=[],
+    setup_requires=setup_requires,
     ext_modules=CYTHON_EXTENSION_MODULES,
     entry_points={
         'console_scripts': ['pysample=pysample.command_line:main'],

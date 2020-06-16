@@ -69,7 +69,7 @@ pip install -r requirements_web.txt
 启动PySample server
 ```shell
 cd server
-export SQLALCHEMY_DATABASE_URI=mysql+pymysql://{user}:{password}@{host}/{database}?charset=utf8mb4
+export DATABASE_URI=mysql+pymysql://{user}:{password}@{host}/{database}?charset=utf8mb4
 export FLAMEGRAPH_PATH=/root/FlameGraph/flamegraph.pl
 python app.py -i   # init db tables
 python app.py --host=127.0.0.1 --port=10002

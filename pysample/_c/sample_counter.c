@@ -18,10 +18,12 @@
 #define AVAILABLE_BUFFER_SIZE(buffer) ((buffer)->max_size - (buffer)->size)
 
 
-
 size_t filenames_hash(const void *key);
+
 int filenames_compare(const void *key1, const void *key2);
+
 size_t traceback_hash(const void *key);
+
 int traceback_compare(const void *key1, const void *key2);
 
 HashMapType filenames_hash_t = {
@@ -37,17 +39,17 @@ HashMapType points_hash_t = {
 
 
 size_t filenames_hash(const void *key) {
-    return PyObject_Hash((PyObject *)key);
+    return PyObject_Hash((PyObject *) key);
 }
 
 int filenames_compare(const void *key1, const void *key2) {
-    return PyUnicode_Compare((PyObject *)key1, (PyObject *)key2);
+    return PyUnicode_Compare((PyObject *) key1, (PyObject *) key2);
 }
 
 
 size_t traceback_hash(const void *key) {
     size_t hash_value;
-    SampleTraceback *tb = (SampleTraceback *)key;
+    SampleTraceback *tb = (SampleTraceback *) key;
     if (tb->hash_value) {
         return tb->hash_value;
     }
@@ -58,7 +60,7 @@ size_t traceback_hash(const void *key) {
 }
 
 int traceback_compare(const void *key1, const void *key2) {
-    return SampleTraceback_Compare((SampleTraceback *)key1, (SampleTraceback *)key2);
+    return SampleTraceback_Compare((SampleTraceback *) key1, (SampleTraceback *) key2);
 }
 
 
@@ -69,7 +71,7 @@ SampleCounter *SampleCounter_Create(int delta, PyObject *sys_path) {
     if (counter == NULL) {
         return NULL;
     }
-    
+
     counter->delta = delta;
     Py_INCREF(sys_path);
     counter->sys_path = sys_path;
@@ -170,7 +172,7 @@ int SampleCounter_AddFrame(SampleCounter *counter, PyObject *frame) {
     PyFrameObject *pyframe;
     SampleTraceback *traceback;
 
-    pyframe = (PyFrameObject *)frame;
+    pyframe = (PyFrameObject *) frame;
     traceback = SampleTraceback_Create(pyframe, counter->filenames);
     if (traceback == NULL) {
         return -1;
@@ -209,12 +211,12 @@ static PackagePathArray *get_path_array() {
 
     if (path_array->length >= path_array->max_length) {
         int max_length = path_array->max_length;
-        PackagePathArray *tmp = PyMem_Realloc(path_array, max_length * 2);
+        int new_size = sizeof(PackagePathArray) + (max_length * 2 - DEFAULT_PATH_ARRAY_SIZE) * sizeof(PyObject * );
+        PackagePathArray *tmp = PyMem_Realloc(path_array, new_size);
         if (tmp == NULL) {
             return NULL;
         }
         path_array = tmp;
-        path_array->length = max_length;
         path_array->max_length = max_length * 2;
     }
 
@@ -222,28 +224,33 @@ static PackagePathArray *get_path_array() {
 }
 
 
-static void add_path_to_array(PackagePathArray *path_array, PyObject *path) {
+static int add_path_to_array(PyObject *path) {
     int i;
     PyObject *item;
     Py_ssize_t path_len = PyUnicode_GET_LENGTH(path);
+    PackagePathArray *path_array = get_path_array();
+    if (path_array == NULL) {
+        return -1;
+    }
 
-    for (i=0; i<path_array->length; i++) {
+    for (i = 0; i < path_array->length; i++) {
         item = path_array->array[i];
         if (path_len >= PyUnicode_GET_LENGTH(item)) {
-            void* src = (char *)path_array->array + i * sizeof(PyObject *);
-            void* dest = (char *)src + sizeof(PyObject *);
-            size_t size = (path_array->length - i) * sizeof(PyObject *);
+            void *src = (char *) path_array->array + i * sizeof(PyObject * );
+            void *dest = (char *) src + sizeof(PyObject * );
+            size_t size = (path_array->length - i) * sizeof(PyObject * );
             memmove(dest, src, size);
 
             Py_INCREF(path);
             path_array->array[i] = path;
             path_array->length++;
-            return;
+            return 0;
         }
     }
 
     Py_INCREF(path);
     path_array->array[path_array->length++] = path;
+    return 0;
 }
 
 
@@ -290,7 +297,7 @@ PyObject *shorten_filename(PyObject *filename, SampleCounter *counter) {
     }
 
     // The filename starts with the path in the cached path array.
-    for (n=0; n<path_array->length; n++) {
+    for (n = 0; n < path_array->length; n++) {
         item = path_array->array[n];
         len = PyUnicode_GET_LENGTH(item);
         if (PyUnicode_Find(filename, item, 0, len, 1) >= 0) {
@@ -313,7 +320,7 @@ PyObject *shorten_filename(PyObject *filename, SampleCounter *counter) {
 
     assert(PyList_Check(sys_path));
 
-    for (n=0; n<PyList_GET_SIZE(sys_path); n++) {
+    for (n = 0; n < PyList_GET_SIZE(sys_path); n++) {
         item = PyList_GET_ITEM(sys_path, n);
         len = PyUnicode_GET_LENGTH(item);
         if (len <= 0) {
@@ -335,11 +342,17 @@ PyObject *shorten_filename(PyObject *filename, SampleCounter *counter) {
             while (--n >= 0) {
                 long_item = PyList_GET_ITEM(sys_path, n);
                 len = PyUnicode_GET_LENGTH(long_item);
+                if (len <= 0) {
+                    continue;
+                }
+
                 if (PyUnicode_Find(long_item, item, 0, len, 1) >= 0) {
-                    add_path_to_array(path_array, long_item);
+                    // ignore failed to add path
+                    add_path_to_array(long_item);
                 }
             }
-            add_path_to_array(path_array, item);
+            // ignore failed to add path
+            add_path_to_array(item);
             return short_filename;
         }
     }
@@ -421,8 +434,8 @@ int dump_traceback(SampleCounter *counter, SampleTraceback *traceback, OutputBuf
     SampleFrame *frame;
     PyObject *filename;
 
-    for (i=0; i<n; i++) {
-        frame = &traceback->frames[n-i-1];
+    for (i = 0; i < n; i++) {
+        frame = &traceback->frames[n - i - 1];
 
         filename = shorten_filename(frame->filename, counter);
         if (filename == NULL) {
@@ -473,7 +486,6 @@ int dump_traceback(SampleCounter *counter, SampleTraceback *traceback, OutputBuf
 
     return 0;
 }
-
 
 
 /**

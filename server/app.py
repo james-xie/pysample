@@ -31,16 +31,16 @@ errors = Blueprint("errors", __name__)
 logger = logging.getLogger(__name__)
 
 # example: mysql+pymysql://{user}:{password}@{host}/{database}?charset=utf8mb4
-if "DATABASE_URL" not in os.environ:
-    raise ValueError("'DATABASE_URL' is not configured.")
+if "DATABASE_URI" not in os.environ:
+    raise ValueError("'DATABASE_URI' is not configured.")
 else:
-    SQLALCHEMY_DATABASE_URL = os.environ["DATABASE_URL"]
+    SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URI"]
 
 # example: /root/FlameGraph/flamegraph.pl
 FLAMEGRAPH_PATH = os.environ.get("FLAMEGRAPH_PATH")
 
 app.config["SECRET_KEY"] = "1234567890"
-app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URL
+app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
