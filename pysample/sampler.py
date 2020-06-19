@@ -58,10 +58,12 @@ class Sampler:
         self._context_manager.push(ctx)
         return ctx
 
-    def end(self, ctx: SampleContext):
+    def end(self, ctx: SampleContext) -> bool:
         self._context_manager.pop(ctx)
         if ctx.lifecycle >= self._output_threshold:
             self._output_repo.store(ctx)
+            return True
+        return False
 
     def __call__(self, func: FunctionType):
         @functools.wraps(func)

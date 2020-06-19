@@ -18,6 +18,7 @@ from flask_admin.helpers import get_redirect_target
 from flask_admin.model.filters import BaseFilter
 from flask_admin.model.helpers import get_mdict_item_or_list
 from sqlalchemy import UniqueConstraint, BigInteger, Text
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import Column, Integer, String, DateTime
 from marshmallow import Schema, fields, validate
@@ -55,7 +56,7 @@ class SampleRecord(db.Model):
     name = Column(String(length=255), nullable=False)
     process_id = Column(Integer, nullable=False)
     thread_id = Column(BigInteger, nullable=False)
-    stack_info = Column(Text, nullable=False)
+    stack_info = Column(LONGTEXT, nullable=False)
     created_at = Column(DateTime, nullable=False)
     execution_time = Column(Integer, nullable=False)
 

@@ -98,10 +98,10 @@ class FlaskSample(object):
     def after_request(self, response: Response) -> Response:
         ctx = getattr(g, CONTEXT_FIELD_NAME, None)
         if ctx:
-            self._sampler.end(ctx)
+            output = self._sampler.end(ctx)
             delattr(g, CONTEXT_FIELD_NAME)
-
-            response.headers["X-PySample-ID"] = f"{self._client.project}/{ctx.ident}"
+            if output:
+                response.headers["X-PySample-ID"] = f"{self._client.project}/{ctx.ident}"
         else:
             logger.error("Cannot get sample context from flask.g in teardown request")
         return response

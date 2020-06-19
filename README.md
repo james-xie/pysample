@@ -104,4 +104,4 @@ if __name__ == '__main__':
 查看慢请求的火焰图:
 ![web application demo](./images/web_app_demo.gif)
 
-另外，还可以根据X-PySample-ID直接访问url "/sample/flamegraph/<project>/<sample_id>"来查看火焰图.
+另外，还可以根据X-PySample-ID直接访问url '/sample/flamegraph/<project>/<sample_id>'来查看火焰图.
