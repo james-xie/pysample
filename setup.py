@@ -62,7 +62,7 @@ if not ENABLE_DEBUG:
 else:
     CYTHON_EXTENSION_MODULES = ext
 
-VERSION = '1.0.2'
+VERSION = '1.0.3'
 
 from distutils.command.build import build as build_orig
 class build(build_orig):
